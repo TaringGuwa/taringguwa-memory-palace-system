@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>DECODE // DRILL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700;800&display=swap');
+
+:root{
+  --bg:#0B0D10;
+  --panel:#14171C;
+  --panel-alt:#1B1F26;
+  --text:#E8EAED;
+  --text-dim:#8A93A3;
+  --text-faint:#565E6B;
+  --border:#262B33;
+  --border-soft:#1E222A;
+  --accent:#9BA4B5;
+  --accent-dim:#9BA4B522;
+  --good:#3DDC84;
+  --bad:#FF3B5C;
+  --radius:14px;
+}
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0; height:100%;}
+body{
+  background: radial-gradient(circle at 50% -10%, #1a1e26 0%, var(--bg) 55%);
+  color:var(--text);
+  font-family:'Space Grotesk', system-ui, sans-serif;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+button{font-family:inherit;}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+.mono{font-family:'JetBrains Mono', ui-monospace, monospace;}
+
+.app{max-width:480px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; padding:14px 14px 28px;}
+
+/* ---- topbar ---- */
+.topbar{display:flex; align-items:center; justify-content:space-between; padding:6px 2px 14px; gap:8px;}
+.brand{font-family:'JetBrains Mono', monospace; font-weight:800; font-size:14px; letter-spacing:.12em; color:var(--text);}
+.brand span{color:var(--accent); transition:color .25s;}
+.topbar-actions{display:flex; align-items:center; gap:8px;}
+.ghost-btn{background:transparent; border:1px solid var(--border); color:var(--text-dim); padding:7px 12px; border-radius:20px; font-size:12px; letter-spacing:.03em; cursor:pointer;}
+.ghost-btn:active{transform:scale(.96);}
+.icon-btn{background:transparent; border:1px solid var(--border); color:var(--text-dim); width:32px; height:32px; border-radius:50%; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center;}
+.icon-btn:active{transform:scale(.92);}
+
+/* ---- layer tabs ---- */
+.layer-tabs{display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:16px;}
+.layer-tab{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:8px 2px; text-align:center; cursor:pointer; color:var(--text-dim); transition:border-color .2s, color .2s, background .2s;}
+.layer-tab .lt-label{font-size:11px; font-weight:600; letter-spacing:.02em;}
+.layer-tab .lt-sub{font-family:'JetBrains Mono',monospace; font-size:9px; opacity:.7; margin-top:2px;}
+.layer-tab.active{color:var(--text); border-color:var(--accent); background:linear-gradient(180deg, var(--accent-dim), transparent); box-shadow:0 0 0 1px var(--accent-dim);}
+
+.view{display:flex; flex-direction:column; gap:14px;}
+.hidden{display:none !important;}
+
+/* ---- panels / cards ---- */
+.panel{background:var(--panel); border:1px solid var(--border-soft); border-radius:var(--radius); padding:16px;}
+.stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+.stat-grid-2{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
+.stat-card{background:var(--panel-alt); border:1px solid var(--border-soft); border-radius:10px; padding:10px 8px; text-align:center;}
+.stat-card .sv{font-family:'JetBrains Mono',monospace; font-size:19px; font-weight:700; color:var(--accent);}
+.stat-card .sl{font-size:10px; color:var(--text-dim); margin-top:3px; letter-spacing:.02em;}
+
+.section-label{font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); margin:2px 0 8px;}
+
+.chip-row{display:flex; flex-wrap:wrap; gap:6px;}
+.chip{background:var(--panel-alt); border:1px solid var(--border-soft); border-radius:8px; padding:6px 9px; font-size:11.5px; color:var(--text-dim); display:flex; align-items:center; gap:6px;}
+.chip b{color:var(--text); font-family:'JetBrains Mono',monospace;}
+.empty-note{color:var(--text-faint); font-size:12px; padding:4px 2px;}
+
+/* ---- session size ---- */
+.seg{display:flex; background:var(--panel-alt); border:1px solid var(--border-soft); border-radius:10px; padding:3px; gap:3px;}
+.seg button{flex:1; background:transparent; border:none; color:var(--text-dim); padding:9px 0; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;}
+.seg button.active{background:var(--accent); color:#0B0D10;}
+
+.primary-btn{width:100%; background:var(--accent); color:#0B0D10; border:none; border-radius:12px; padding:15px 0; font-size:15px; font-weight:700; letter-spacing:.02em; cursor:pointer; transition:transform .1s, filter .15s;}
+.primary-btn:active{transform:scale(.98); filter:brightness(.9);}
+.secondary-btn{width:100%; background:transparent; color:var(--text-dim); border:1px solid var(--border); border-radius:12px; padding:13px 0; font-size:13.5px; cursor:pointer;}
+.secondary-btn:active{transform:scale(.98);}
+.danger-text{color:var(--bad); font-size:11.5px; background:transparent; border:none; text-decoration:underline; cursor:pointer; padding:6px 0;}
+
+/* ---- drill screen ---- */
+#view-drill{align-items:center; padding-top:6px;}
+.drill-top{width:100%; display:flex; align-items:center; justify-content:space-between;}
+.exit-btn{background:transparent; border:1px solid var(--border); color:var(--text-faint); border-radius:16px; padding:6px 11px; font-size:11px; cursor:pointer;}
+.live-avg{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-dim);}
+.live-avg b{color:var(--accent); font-size:14px;}
+
+.progress-dots{display:flex; gap:4px; flex-wrap:wrap; justify-content:center; width:100%; margin-top:2px;}
+.dot{width:6px; height:6px; border-radius:50%; background:var(--border);}
+.dot.done{background:var(--accent);}
+.dot.t-good{background:var(--good);}
+.dot.t-slow{background:var(--bad);}
+.dot.current{background:var(--accent); box-shadow:0 0 0 3px var(--accent-dim);}
+
+.reticle{width:100%; aspect-ratio:1.35/1; border:1.5px solid var(--accent); border-radius:18px; position:relative; display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg, var(--accent-dim), transparent 40%), var(--panel); margin-top:6px; overflow:hidden; transition:border-color .18s, box-shadow .18s;}
+.reticle::before, .reticle::after{content:''; position:absolute; width:16px; height:16px; border:2px solid var(--accent); opacity:.6; z-index:2;}
+.reticle::before{top:10px; left:10px; border-right:none; border-bottom:none;}
+.reticle::after{bottom:10px; right:10px; border-left:none; border-top:none;}
+.reticle.flash-good{box-shadow:0 0 0 3px var(--good) inset; border-color:var(--good);}
+.reticle.flash-slow{box-shadow:0 0 0 3px var(--bad) inset; border-color:var(--bad);}
+
+.big-number{font-family:'JetBrains Mono',monospace; font-weight:800; font-size:clamp(52px, 16vw, 84px); letter-spacing:.02em; color:var(--text); animation:pop-in .18s ease-out;}
+@keyframes pop-in{from{opacity:0; transform:scale(.85);} to{opacity:1; transform:scale(1);}}
+
+.reveal-thumb{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:var(--panel); padding:16px; z-index:1;}
+.thumb-caption{position:absolute; left:0; right:0; bottom:0; text-align:center; font-size:12px; padding:6px 8px; background:linear-gradient(0deg, rgba(0,0,0,.65), transparent); color:var(--text); z-index:3;}
+
+.decode-btn{width:100%; margin-top:16px; background:var(--text); color:#0B0D10; border:none; border-radius:16px; padding:22px 0; font-size:16px; font-weight:800; letter-spacing:.03em; cursor:pointer; transition:transform .08s;}
+.decode-btn:active{transform:scale(.97);}
+.decode-btn:disabled{opacity:.5;}
+
+/* ---- live log ---- */
+.log-panel{width:100%; padding:12px 14px;}
+.log-list{max-height:180px; overflow-y:auto; display:flex; flex-direction:column-reverse; gap:0;}
+.log-row{display:flex; align-items:center; justify-content:space-between; padding:7px 2px; border-bottom:1px solid var(--border-soft); font-size:12.5px;}
+.log-row:first-child{border-bottom:none;}
+.log-left{display:flex; align-items:center;}
+.log-thumb{width:22px; height:22px; object-fit:cover; border-radius:5px; margin-right:7px; flex-shrink:0;}
+.log-val{color:var(--text); font-weight:600;}
+.log-name{color:var(--text-faint); font-size:11px; margin-left:6px;}
+.log-time{font-weight:700;}
+.tc-good{color:var(--good);}
+.tc-mid{color:var(--accent);}
+.tc-slow{color:var(--bad);}
+
+/* ---- summary ---- */
+.summary-hero{text-align:center; padding:10px 0 4px;}
+.summary-hero .sh-avg{font-family:'JetBrains Mono',monospace; font-size:44px; font-weight:800; color:var(--accent);}
+.summary-hero .sh-label{font-size:11px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase; margin-top:2px;}
+.trend{font-size:12px; margin-top:6px;}
+.trend.up{color:var(--good);}
+.trend.down{color:var(--bad);}
+.trend.flat{color:var(--text-dim);}
+
+/* ---- history ---- */
+.session-row{display:flex; align-items:center; justify-content:space-between; padding:10px 2px; border-bottom:1px solid var(--border-soft); font-size:12.5px;}
+.session-row:last-child{border-bottom:none;}
+.session-row .sr-date{color:var(--text-dim);}
+.session-row .sr-avg{font-family:'JetBrains Mono',monospace; color:var(--text); font-weight:600;}
+.session-row .sr-size{color:var(--text-faint); font-size:11px; margin-left:8px;}
+svg.spark{display:block; margin-top:6px;}
+
+.footer-note{text-align:center; color:var(--text-faint); font-size:10.5px; margin-top:6px; line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">DECODE&nbsp;<span id="brand-accent">// DRILL</span></div>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="btn-mute" title="Suara">🔊</button>
+      <button class="ghost-btn" id="btn-toggle-history">Riwayat</button>
+    </div>
+  </div>
+
+  <nav class="layer-tabs" id="layer-tabs"></nav>
+
+  <!-- HOME -->
+  <main class="view" id="view-home">
+    <div class="panel">
+      <div class="section-label">Statistik layer ini</div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="sv" id="stat-avg">–</div><div class="sl">rata² decode</div></div>
+        <div class="stat-card"><div class="sv" id="stat-reps">0</div><div class="sl">total reps</div></div>
+        <div class="stat-card"><div class="sv" id="stat-best">–</div><div class="sl">tercepat</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="section-label">Perlu latihan (auto-fokus, by kecepatan)</div>
+      <div class="chip-row" id="focus-chips"></div>
+    </div>
+
+    <div class="panel">
+      <div class="section-label">Jumlah repetisi</div>
+      <div class="seg" id="size-seg">
+        <button data-size="10">10</button>
+        <button data-size="20" class="active">20</button>
+        <button data-size="30">30</button>
+      </div>
+    </div>
+
+    <button class="primary-btn" id="btn-start">Mulai Drill</button>
+  </main>
+
+  <!-- DRILL -->
+  <main class="view hidden" id="view-drill">
+    <div class="drill-top">
+      <button class="exit-btn" id="btn-exit-drill">✕ keluar</button>
+      <div class="live-avg">rata² sesi <b id="live-avg-val">–</b></div>
+    </div>
+    <div class="progress-dots" id="progress-dots"></div>
+
+    <div class="reticle" id="reticle">
+      <div class="big-number mono" id="big-number">–</div>
+      <img class="reveal-thumb hidden" id="reveal-thumb" alt="">
+      <div class="thumb-caption hidden" id="thumb-caption"></div>
+    </div>
+
+    <button class="decode-btn" id="btn-decode">SUDAH DECODE</button>
+
+    <div class="panel log-panel">
+      <div class="section-label">Catatan sesi (angka · waktu)</div>
+      <div class="log-list" id="log-list"><div class="empty-note">Belum ada klik.</div></div>
+    </div>
+  </main>
+
+  <!-- SUMMARY -->
+  <main class="view hidden" id="view-summary">
+    <div class="panel summary-hero">
+      <div class="sh-avg mono" id="sum-avg">0.00s</div>
+      <div class="sh-label">rata² sesi ini</div>
+      <div class="trend" id="sum-trend"></div>
+    </div>
+    <div class="panel">
+      <div class="stat-grid-2">
+        <div class="stat-card"><div class="sv" id="sum-fastest">–</div><div class="sl">tercepat</div></div>
+        <div class="stat-card"><div class="sv" id="sum-slowest">–</div><div class="sl">terlambat</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="section-label">Paling lambat ronde ini</div>
+      <div class="chip-row" id="sum-chips"></div>
+    </div>
+    <button class="primary-btn" id="btn-again">Ulangi Drill</button>
+    <button class="secondary-btn" id="btn-done">Selesai</button>
+  </main>
+
+  <!-- HISTORY -->
+  <main class="view hidden" id="view-history">
+    <div class="panel">
+      <div class="section-label">Tren rata² waktu (sesi terakhir)</div>
+      <svg class="spark" id="spark-svg" width="100%" height="60" viewBox="0 0 300 60" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="panel">
+      <div class="section-label">Riwayat sesi</div>
+      <div id="session-list"><div class="empty-note">Belum ada sesi.</div></div>
+    </div>
+    <button class="danger-text" id="btn-reset-layer">Reset data layer ini</button>
+  </main>
+
+  <div class="footer-note">Target reflex: sub-1 detik per image · evaluasi murni dari lama klik tombol · data tersimpan lokal per akun</div>
+</div>
+
+<script>
+(function(){
+
+// ---------- DATA (source: Memory Palace 1.1) ----------
+const LAYERS = {
+  person: { label:'Person', sub:'0–9', accent:'#9BA4B5',
+    items:[
+      {v:0,name:'Saitama'},{v:1,name:'Soekarno'},{v:2,name:'Spongebob'},
+      {v:3,name:'Hitler'},{v:4,name:'Mr Bean'},{v:5,name:'John Wick'},
+      {v:6,name:'Jungkook'},{v:7,name:'Pak Ogah'},{v:8,name:'Samurai'},{v:9,name:'Jesus'}
+    ]},
+  effect: { label:'Effect', sub:'10–90', accent:'#FF7A30',
+    items:[
+      {v:10,name:'Api'},{v:20,name:'Es'},{v:30,name:'Listrik'},
+      {v:40,name:'Akar/Alam'},{v:50,name:'Membesar/Raksasa'},{v:60,name:'Mengecil'},
+      {v:70,name:'Psychic (Mewtwo)'},{v:80,name:'Air'},{v:90,name:'Emas'}
+    ]},
+  melee: { label:'Melee', sub:'100–900', accent:'#E8543F',
+    items:[
+      {v:100,name:'Tongkat komando'},{v:200,name:'Spatula Spongebob'},{v:300,name:'Cambuk'},
+      {v:400,name:'Stick golf'},{v:500,name:'Payung hitam'},{v:600,name:'Gagang mic'},
+      {v:700,name:'Tonfa'},{v:800,name:'Katana'},{v:900,name:'Salib besar & panjang'}
+    ]},
+  ranged: { label:'Ranged', sub:'1000–9000', accent:'#35B4FF',
+    items:[
+      {v:1000,name:'Peletokan (bambu)'},{v:2000,name:'Peniup gelembung'},{v:3000,name:'Revolver'},
+      {v:4000,name:'Ketapel'},{v:5000,name:'Bazoka'},{v:6000,name:'Selang air'},
+      {v:7000,name:'Boulder'},{v:8000,name:'Shuriken besar (Mizuki)'},{v:9000,name:'Taser gun'}
+    ]},
+  summon: { label:'Summon', sub:'10000–90000', accent:'#B26BFF',
+    items:[
+      {v:10000,name:'Icon Insurgent (laser merah)'},{v:20000,name:'Garry (nempel kepala)'},
+      {v:30000,name:'Mini Tank mainan'},{v:40000,name:'Teddy Bear'},{v:50000,name:'Kelelawar'},
+      {v:60000,name:'Not lagu terbang + do-re-mi'},{v:70000,name:'Dolar terbang & berlipat'},
+      {v:80000,name:'Bunshin (mini-clone)'},{v:90000,name:'Peri kecil + tongkat sihir'}
+    ]}
+};
+const LAYER_KEYS = ['person','effect','melee','ranged','summon'];
+
+// ---------- IMAGES (opsional — isi manual pakai asset_converter.html) ----------
+// Format: IMAGES.<layer>[<value>] = "data:image/jpeg;base64,....." (atau path relatif spt "assets/person/0.jpg")
+// Kosongin aja kalau belum ada gambar untuk item itu — otomatis fallback ke tampilan angka/teks biasa.
+const IMAGES = {
+  person: {},
+  effect: {},
+  melee: {},
+  ranged: {},
+  summon: {}
+};
+function itemImage(layer, val){
+  return (IMAGES[layer] && IMAGES[layer][val]) ? IMAGES[layer][val] : null;
+}
+
+const STORE_KEY = 'drill-data';
+const SETTINGS_KEY = 'drill-settings';
+const MAX_RECENT = 20;
+const MAX_SESSIONS = 300;
+const ADVANCE_DELAY = 550; // ms jeda sebelum lanjut ke angka berikutnya (dikasih ruang buat thumbnail muncul kalau ada)
+
+// ---------- STATE ----------
+let DATA = { stats:{}, sessions:[] };
+let currentLayer = 'person';
+let sessionSize = 20;
+let session = null; // {layer, plan:[val,...], idx, results:[{val,timeMs}], startTs}
+let soundOn = true;
+let audioCtx = null;
+
+function emptyItemStat(){ return { n:0, sum:0, recent:[], best:null }; }
+
+function ensureLayerStats(layer){
+  if(!DATA.stats[layer]) DATA.stats[layer] = {};
+  LAYERS[layer].items.forEach(it=>{
+    const existing = DATA.stats[layer][it.v];
+    if(!existing){
+      DATA.stats[layer][it.v] = emptyItemStat();
+    } else {
+      if(typeof existing.n !== 'number') existing.n = 0;
+      if(typeof existing.sum !== 'number') existing.sum = 0;
+      if(!Array.isArray(existing.recent)) existing.recent = [];
+      if(typeof existing.best !== 'number') existing.best = null;
+    }
+  });
+}
+LAYER_KEYS.forEach(ensureLayerStats);
+
+// ---------- STORAGE ----------
+async function loadData(){
+  try{
+    const res = await window.storage.get(STORE_KEY, false);
+    if(res && res.value){
+      const parsed = JSON.parse(res.value);
+      DATA.stats = parsed.stats || {};
+      DATA.sessions = parsed.sessions || [];
+    }
+  }catch(e){ /* belum ada data tersimpan */ }
+  LAYER_KEYS.forEach(ensureLayerStats);
+}
+
+let saveTimer = null;
+function saveData(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    try{ await window.storage.set(STORE_KEY, JSON.stringify(DATA), false); }
+    catch(e){ console.error('gagal simpan data drill', e); }
+  }, 150);
+}
+
+async function loadSettings(){
+  try{
+    const res = await window.storage.get(SETTINGS_KEY, false);
+    if(res && res.value){
+      const s = JSON.parse(res.value);
+      soundOn = s.sound !== false;
+    }
+  }catch(e){ /* default: suara nyala */ }
+  updateMuteIcon();
+}
+function saveSettings(){
+  window.storage.set(SETTINGS_KEY, JSON.stringify({sound:soundOn}), false).catch(()=>{});
+}
+function updateMuteIcon(){
+  document.getElementById('btn-mute').textContent = soundOn ? '🔊' : '🔇';
+}
+
+// ---------- SOUND (Web Audio synth — gak butuh file audio) ----------
+function ensureAudio(){
+  if(!soundOn) return null;
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e){ return null; }
+  }
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function playTone(freq, duration, type){
+  const ctx = ensureAudio();
+  if(!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type || 'sine';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.008);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + duration + 0.02);
+}
+function playTierSound(tier){
+  if(tier==='good') playTone(880, 0.11, 'sine');
+  else if(tier==='mid') playTone(520, 0.11, 'triangle');
+  else playTone(220, 0.16, 'sawtooth');
+}
+function playFinishChime(){
+  if(!ensureAudio()) return;
+  [523.25, 659.25, 783.99].forEach((f,i)=>{ setTimeout(()=>playTone(f,0.14,'sine'), i*90); });
+}
+
+// ---------- HELPERS ----------
+function fmtSec(ms){ return (ms/1000).toFixed(2)+'s'; }
+function speedTier(ms){ return ms<1000 ? 'good' : (ms<2500 ? 'mid' : 'slow'); }
+function todayLabel(ts){
+  const d = new Date(ts);
+  return d.toLocaleDateString('id-ID',{day:'2-digit',month:'short'}) + ' ' +
+         d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+}
+function itemAvg(stat){ return stat.n>0 ? stat.sum/stat.n : null; }
+
+function layerAggregate(layer){
+  const stats = DATA.stats[layer];
+  let n=0, sum=0, best=null;
+  Object.values(stats).forEach(s=>{
+    n+=s.n; sum+=s.sum;
+    if(typeof s.best==='number') best = (best===null) ? s.best : Math.min(best, s.best);
+  });
+  return { n, avg: n>0? sum/n : null, best };
+}
+
+function focusList(layer, limit){
+  const stats = DATA.stats[layer];
+  const items = LAYERS[layer].items;
+  const avgs = items.map(it=>itemAvg(stats[it.v])).filter(x=>x!==null);
+  const fastestAvg = avgs.length ? Math.min(...avgs) : 1000;
+  const scored = items.map(it=>{
+    const s = stats[it.v];
+    let weight;
+    if(s.n < 3){
+      weight = 2.5;
+    } else {
+      const avg = itemAvg(s);
+      const timeFactor = Math.max(0, (avg/fastestAvg) - 1);
+      weight = 1 + timeFactor*3;
+    }
+    return { it, s, weight };
+  });
+  return scored.sort((a,b)=>b.weight-a.weight).slice(0, limit);
+}
+
+function weightedPick(layer, avoidVal){
+  const scored = focusList(layer, LAYERS[layer].items.length);
+  let pool = scored.filter(x=>x.it.v !== avoidVal);
+  if(pool.length===0) pool = scored;
+  const total = pool.reduce((s,x)=>s+x.weight,0);
+  let r = Math.random()*total;
+  for(const x of pool){
+    r -= x.weight;
+    if(r<=0) return x.it;
+  }
+  return pool[pool.length-1].it;
+}
+
+// ---------- RENDER: TABS ----------
+function renderTabs(){
+  const nav = document.getElementById('layer-tabs');
+  nav.innerHTML = '';
+  LAYER_KEYS.forEach(key=>{
+    const L = LAYERS[key];
+    const btn = document.createElement('button');
+    btn.className = 'layer-tab' + (key===currentLayer ? ' active' : '');
+    btn.innerHTML = '<div class="lt-label">'+L.label+'</div><div class="lt-sub mono">'+L.sub+'</div>';
+    btn.addEventListener('click', ()=>{ currentLayer = key; applyAccent(); renderTabs(); renderHome(); renderHistory(); });
+    nav.appendChild(btn);
+  });
+}
+function applyAccent(){ document.documentElement.style.setProperty('--accent', LAYERS[currentLayer].accent); }
+
+// ---------- RENDER: HOME ----------
+function renderHome(){
+  const agg = layerAggregate(currentLayer);
+  document.getElementById('stat-avg').textContent = agg.avg!==null ? fmtSec(agg.avg) : '–';
+  document.getElementById('stat-reps').textContent = agg.n;
+  document.getElementById('stat-best').textContent = agg.best!==null ? fmtSec(agg.best) : '–';
+
+  const chipsEl = document.getElementById('focus-chips');
+  chipsEl.innerHTML = '';
+  const top = focusList(currentLayer, 5).filter(x=>x.s.n>0);
+  if(top.length===0){
+    chipsEl.innerHTML = '<div class="empty-note">Belum ada data — mulai drill dulu.</div>';
+  } else {
+    top.forEach(({it,s})=>{
+      const avg = itemAvg(s);
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.innerHTML = '<b>'+it.v+'</b> '+it.name+(avg!==null ? ' · '+fmtSec(avg) : '');
+      chipsEl.appendChild(chip);
+    });
+  }
+}
+
+// ---------- SESSION SIZE ----------
+document.getElementById('size-seg').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-size]');
+  if(!btn) return;
+  sessionSize = parseInt(btn.dataset.size,10);
+  document.querySelectorAll('#size-seg button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+});
+
+// ---------- DRILL FLOW ----------
+function buildPlan(layer, size){
+  const plan = [];
+  let last = null;
+  for(let i=0;i<size;i++){
+    const it = weightedPick(layer, last);
+    plan.push(it.v);
+    last = it.v;
+  }
+  return plan;
+}
+
+function startSession(){
+  session = { layer: currentLayer, plan: buildPlan(currentLayer, sessionSize), idx: 0, results: [], startTs: 0 };
+  switchView('drill');
+  document.getElementById('log-list').innerHTML = '<div class="empty-note">Belum ada klik.</div>';
+  document.getElementById('live-avg-val').textContent = '–';
+  renderProgressDots();
+  presentItem();
+}
+
+function renderProgressDots(){
+  const wrap = document.getElementById('progress-dots');
+  wrap.innerHTML = '';
+  session.plan.forEach((val,i)=>{
+    const d = document.createElement('div');
+    d.className = 'dot';
+    if(i < session.idx){
+      d.classList.add('done', 't-'+speedTier(session.results[i].timeMs));
+    } else if(i === session.idx){
+      d.classList.add('current');
+    }
+    wrap.appendChild(d);
+  });
+}
+
+function currentItem(){
+  const val = session.plan[session.idx];
+  return LAYERS[session.layer].items.find(x=>x.v===val);
+}
+
+function presentItem(){
+  const it = currentItem();
+  document.getElementById('big-number').textContent = it.v;
+  document.getElementById('big-number').classList.remove('hidden');
+  const reticle = document.getElementById('reticle');
+  reticle.classList.remove('flash-good','flash-slow');
+  const thumb = document.getElementById('reveal-thumb');
+  const cap = document.getElementById('thumb-caption');
+  thumb.classList.add('hidden'); thumb.src = '';
+  cap.classList.add('hidden'); cap.textContent = '';
+  document.getElementById('btn-decode').disabled = false;
+  const bn = document.getElementById('big-number');
+  bn.style.animation = 'none'; void bn.offsetWidth; bn.style.animation = '';
+  session.startTs = performance.now();
+}
+
+function addLogEntry(it, elapsed, tier, layer){
+  const listEl = document.getElementById('log-list');
+  if(listEl.querySelector('.empty-note')) listEl.innerHTML = '';
+  const img = itemImage(layer, it.v);
+  const row = document.createElement('div');
+  row.className = 'log-row';
+  row.innerHTML =
+    '<span class="log-left">'+(img ? '<img class="log-thumb" src="'+img+'" alt="">' : '') +
+    '<span class="log-val mono">'+it.v+'</span><span class="log-name">'+it.name+'</span></span>'+
+    '<span class="log-time mono tc-'+tier+'">'+fmtSec(elapsed)+'</span>';
+  listEl.appendChild(row);
+}
+
+function handleDecode(){
+  if(!session) return;
+  const btn = document.getElementById('btn-decode');
+  if(btn.disabled) return;
+  btn.disabled = true;
+
+  const elapsed = performance.now() - session.startTs;
+  const it = currentItem();
+  const tier = speedTier(elapsed);
+  const layer = session.layer;
+
+  session.results.push({ val: it.v, timeMs: elapsed });
+  addLogEntry(it, elapsed, tier, layer);
+  playTierSound(tier);
+
+  const s = DATA.stats[layer][it.v];
+  s.n += 1; s.sum += elapsed;
+  s.best = (s.best===null) ? elapsed : Math.min(s.best, elapsed);
+  s.recent.push(elapsed); if(s.recent.length>MAX_RECENT) s.recent = s.recent.slice(-MAX_RECENT);
+
+  const runningAvg = session.results.reduce((a,r)=>a+r.timeMs,0)/session.results.length;
+  document.getElementById('live-avg-val').textContent = fmtSec(runningAvg);
+
+  const reticle = document.getElementById('reticle');
+  if(tier==='good') reticle.classList.add('flash-good');
+  else if(tier==='slow') reticle.classList.add('flash-slow');
+
+  // kalau ada gambar buat item ini, tampilkan sebentar sebagai konfirmasi visual
+  const img = itemImage(layer, it.v);
+  if(img){
+    const thumb = document.getElementById('reveal-thumb');
+    const cap = document.getElementById('thumb-caption');
+    thumb.src = img;
+    thumb.onerror = ()=>{ thumb.classList.add('hidden'); };
+    thumb.classList.remove('hidden');
+    cap.textContent = it.v+' · '+it.name;
+    cap.classList.remove('hidden');
+    document.getElementById('big-number').classList.add('hidden');
+  }
+
+  session.idx += 1;
+  renderProgressDots();
+
+  if(session.idx >= session.plan.length){
+    setTimeout(()=>{ playFinishChime(); finishSession(); }, ADVANCE_DELAY);
+  } else {
+    setTimeout(()=>presentItem(), ADVANCE_DELAY);
+  }
+}
+
+function finishSession(){
+  const results = session.results;
+  const n = results.length;
+  const avg = results.reduce((s,r)=>s+r.timeMs,0)/n;
+  const fastest = Math.min(...results.map(r=>r.timeMs));
+  const slowest = Math.max(...results.map(r=>r.timeMs));
+
+  const prevSessions = DATA.sessions.filter(s=>s.layer===session.layer);
+  const prevAvg = prevSessions.length ? prevSessions[prevSessions.length-1].avgMs : null;
+
+  DATA.sessions.push({ ts: Date.now(), layer: session.layer, size: n, avgMs: avg });
+  if(DATA.sessions.length > MAX_SESSIONS) DATA.sessions = DATA.sessions.slice(-MAX_SESSIONS);
+  saveData();
+
+  document.getElementById('sum-avg').textContent = fmtSec(avg);
+  document.getElementById('sum-fastest').textContent = fmtSec(fastest);
+  document.getElementById('sum-slowest').textContent = fmtSec(slowest);
+
+  const trendEl = document.getElementById('sum-trend');
+  if(prevAvg===null){
+    trendEl.textContent = 'Sesi pertama untuk layer ini';
+    trendEl.className = 'trend flat';
+  } else {
+    const diff = avg - prevAvg;
+    const pct = Math.abs(diff/prevAvg*100).toFixed(0);
+    if(diff < -20){ trendEl.textContent = '▼ '+pct+'% lebih cepat dari sesi lalu'; trendEl.className='trend up'; }
+    else if(diff > 20){ trendEl.textContent = '▲ '+pct+'% lebih lambat dari sesi lalu'; trendEl.className='trend down'; }
+    else { trendEl.textContent = 'Stabil dibanding sesi lalu'; trendEl.className='trend flat'; }
+  }
+
+  const byVal = {};
+  results.forEach(r=>{
+    if(!byVal[r.val]) byVal[r.val] = {sum:0,n:0};
+    byVal[r.val].sum += r.timeMs; byVal[r.val].n += 1;
+  });
+  const roundList = Object.entries(byVal).map(([val,d])=>({ val: parseInt(val,10), avg: d.sum/d.n }))
+    .sort((a,b)=> b.avg - a.avg).slice(0,5);
+
+  const chipsEl = document.getElementById('sum-chips');
+  chipsEl.innerHTML = '';
+  const itemsMap = LAYERS[session.layer].items;
+  roundList.forEach(r=>{
+    const it = itemsMap.find(x=>x.v===r.val);
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = '<b>'+r.val+'</b> '+it.name+' · '+fmtSec(r.avg);
+    chipsEl.appendChild(chip);
+  });
+
+  switchView('summary');
+}
+
+// ---------- VIEW SWITCH ----------
+function switchView(name){
+  ['home','drill','summary','history'].forEach(v=>{
+    document.getElementById('view-'+v).classList.toggle('hidden', v!==name);
+  });
+  document.getElementById('layer-tabs').classList.toggle('hidden', name==='drill');
+  document.getElementById('btn-toggle-history').classList.toggle('hidden', name==='drill'||name==='summary');
+  if(name==='home'){ renderHome(); }
+  if(name==='history'){ renderHistory(); }
+}
+
+// ---------- HISTORY ----------
+function renderHistory(){
+  const sessions = DATA.sessions.filter(s=>s.layer===currentLayer).slice(-15);
+  const listEl = document.getElementById('session-list');
+  listEl.innerHTML = '';
+  if(sessions.length===0){
+    listEl.innerHTML = '<div class="empty-note">Belum ada sesi untuk layer ini.</div>';
+  } else {
+    sessions.slice().reverse().forEach(s=>{
+      const row = document.createElement('div');
+      row.className = 'session-row';
+      row.innerHTML =
+        '<div class="sr-date">'+todayLabel(s.ts)+'</div>'+
+        '<div><span class="sr-avg mono">'+fmtSec(s.avgMs)+'</span><span class="sr-size">'+s.size+'x</span></div>';
+      listEl.appendChild(row);
+    });
+  }
+
+  const svg = document.getElementById('spark-svg');
+  svg.innerHTML = '';
+  if(sessions.length>=2){
+    const times = sessions.map(s=>s.avgMs);
+    const max = Math.max(...times), min = Math.min(...times);
+    const range = (max-min) || 1;
+    const w = 300, h = 60, pad = 6;
+    const pts = times.map((t,i)=>{
+      const x = pad + (i/(times.length-1))*(w-pad*2);
+      const y = h - pad - ((t-min)/range)*(h-pad*2);
+      return x.toFixed(1)+','+y.toFixed(1);
+    }).join(' ');
+    const poly = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+    poly.setAttribute('points', pts);
+    poly.setAttribute('fill','none');
+    poly.setAttribute('stroke', LAYERS[currentLayer].accent);
+    poly.setAttribute('stroke-width','2');
+    poly.setAttribute('stroke-linecap','round');
+    poly.setAttribute('stroke-linejoin','round');
+    svg.appendChild(poly);
+  } else {
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x','8'); t.setAttribute('y','34');
+    t.setAttribute('fill','#565E6B'); t.setAttribute('font-size','11');
+    t.textContent = 'Minimal 2 sesi untuk lihat tren';
+    svg.appendChild(t);
+  }
+}
+
+// ---------- EVENTS ----------
+document.getElementById('btn-start').addEventListener('click', startSession);
+document.getElementById('btn-decode').addEventListener('click', handleDecode);
+document.getElementById('btn-exit-drill').addEventListener('click', ()=>{ session = null; switchView('home'); });
+document.getElementById('btn-again').addEventListener('click', startSession);
+document.getElementById('btn-done').addEventListener('click', ()=>{ session=null; switchView('home'); });
+document.getElementById('btn-toggle-history').addEventListener('click', ()=>{
+  const inHistory = !document.getElementById('view-history').classList.contains('hidden');
+  switchView(inHistory ? 'home' : 'history');
+});
+document.getElementById('btn-mute').addEventListener('click', ()=>{
+  soundOn = !soundOn;
+  updateMuteIcon();
+  saveSettings();
+  if(soundOn) playTone(660,0.08,'sine');
+});
+document.getElementById('btn-reset-layer').addEventListener('click', ()=>{
+  const ok = confirm('Reset semua statistik & riwayat untuk layer "'+LAYERS[currentLayer].label+'"? Ini tidak bisa dibatalkan.');
+  if(!ok) return;
+  LAYERS[currentLayer].items.forEach(it=>{ DATA.stats[currentLayer][it.v] = emptyItemStat(); });
+  DATA.sessions = DATA.sessions.filter(s=>s.layer!==currentLayer);
+  saveData();
+  renderHistory();
+  renderHome();
+});
+
+document.addEventListener('keydown', (e)=>{
+  if(document.getElementById('view-drill').classList.contains('hidden')) return;
+  if(e.code==='Space'){ e.preventDefault(); handleDecode(); }
+});
+
+// ---------- INIT ----------
+async function init(){
+  applyAccent();
+  renderTabs();
+  await loadSettings();
+  await loadData();
+  renderHome();
+  renderHistory();
+}
+init();
+
+})();
+</script>
+</body>
+</html>
